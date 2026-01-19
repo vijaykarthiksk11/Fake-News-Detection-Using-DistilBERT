@@ -13,13 +13,13 @@ st.set_page_config(
 )
 
 # -------------------------------------------------
-# HEADER / UI
+# HEADER
 # -------------------------------------------------
 st.markdown(
     """
     <h1 style="text-align:center;">📰 Fake News Detection System</h1>
     <p style="text-align:center; color:grey;">
-    NLP-based web application using DistilBERT to classify news articles
+    NLP-based web application using a fine-tuned DistilBERT model
     </p>
     """,
     unsafe_allow_html=True
@@ -28,26 +28,23 @@ st.markdown(
 st.divider()
 
 # -------------------------------------------------
-# MODEL LOADING (WITH SPINNER)
+# LOAD TRAINED MODEL (LOCAL)
 # -------------------------------------------------
+MODEL_PATH = "C:\Users\11vij\Downloads\544d63c1-320c-4ac6-9f8e-1d8c1191432d\544d63c1-320c-4ac6-9f8e-1d8c1191432d.tmp"
+
 @st.cache_resource
 def load_model():
-    tokenizer = DistilBertTokenizer.from_pretrained(
-        "distilbert-base-uncased"
-    )
-    model = DistilBertForSequenceClassification.from_pretrained(
-        "distilbert-base-uncased",
-        num_labels=2
-    )
+    tokenizer = DistilBertTokenizer.from_pretrained(MODEL_PATH)
+    model = DistilBertForSequenceClassification.from_pretrained(MODEL_PATH)
     model.eval()
     return tokenizer, model
 
 try:
-    with st.spinner("🔄 Loading AI model, please wait..."):
+    with st.spinner("🔄 Loading trained model..."):
         tokenizer, model = load_model()
-    st.success("✅ Model loaded successfully")
+    st.success("✅ Trained model loaded successfully")
 except Exception as e:
-    st.error("❌ Error while loading the model")
+    st.error("❌ Model loading failed. Please check model files.")
     st.stop()
 
 # -------------------------------------------------
@@ -60,14 +57,14 @@ news_text = st.text_area(
 )
 
 # -------------------------------------------------
-# PREDICTION LOGIC
+# PREDICTION
 # -------------------------------------------------
 if st.button("🔍 Analyze News"):
     if news_text.strip() == "":
-        st.warning("⚠ Please enter some text before clicking Analyze.")
+        st.warning("⚠ Please enter some text.")
     else:
         try:
-            with st.spinner("🤖 Analyzing the news content..."):
+            with st.spinner("🤖 Analyzing news content..."):
                 inputs = tokenizer(
                     news_text,
                     return_tensors="pt",
@@ -78,29 +75,26 @@ if st.button("🔍 Analyze News"):
 
                 with torch.no_grad():
                     outputs = model(**inputs)
-                    probabilities = F.softmax(outputs.logits, dim=1)
+                    probs = F.softmax(outputs.logits, dim=1)
 
-                prediction = torch.argmax(probabilities).item()
-                confidence = probabilities[0][prediction].item() * 100
+                prediction = torch.argmax(probs).item()
+                confidence = probs[0][prediction].item() * 100
 
             st.divider()
 
-            # -------------------------------------------------
-            # RESULT DISPLAY (WITH CONFIDENCE)
-            # -------------------------------------------------
             if prediction == 1:
                 st.success(
                     f"✅ **REAL NEWS**\n\n"
-                    f"🔐 Confidence Score: **{confidence:.2f}%**"
+                    f"🔐 Confidence: **{confidence:.2f}%**"
                 )
             else:
                 st.error(
                     f"❌ **FAKE NEWS**\n\n"
-                    f"🔐 Confidence Score: **{confidence:.2f}%**"
+                    f"🔐 Confidence: **{confidence:.2f}%**"
                 )
 
         except Exception as e:
-            st.error("❌ An unexpected error occurred during prediction.")
+            st.error("❌ Error during prediction.")
 
 # -------------------------------------------------
 # FOOTER
@@ -108,8 +102,7 @@ if st.button("🔍 Analyze News"):
 st.divider()
 st.markdown(
     """
-    **Model:** DistilBERT  
-    **Domain:** Natural Language Processing (NLP)  
+    **Model:** Fine-tuned DistilBERT  
     **Deployment:** Streamlit Community Cloud
     """
 )
