@@ -30,7 +30,7 @@ st.divider()
 # -------------------------------------------------
 # LOAD TRAINED MODEL (LOCAL)
 # -------------------------------------------------
-MODEL_PATH = "C:\Users\11vij\Downloads\544d63c1-320c-4ac6-9f8e-1d8c1191432d\544d63c1-320c-4ac6-9f8e-1d8c1191432d.tmp"
+MODEL_PATH = r"C:\Users\11vij\Downloads\544d63c1-320c-4ac6-9f8e-1d8c1191432d\544d63c1-320c-4ac6-9f8e-1d8c1191432d.tmp"
 
 @st.cache_resource
 def load_model():
