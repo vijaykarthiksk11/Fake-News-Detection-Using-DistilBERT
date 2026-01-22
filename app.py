@@ -1,7 +1,7 @@
 import streamlit as st
+import pickle
 import torch
 import torch.nn.functional as F
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
 # -------------------------------------------------
 # PAGE CONFIG
@@ -12,97 +12,62 @@ st.set_page_config(
     layout="centered"
 )
 
-# -------------------------------------------------
-# HEADER
-# -------------------------------------------------
-st.markdown(
-    """
-    <h1 style="text-align:center;">📰 Fake News Detection System</h1>
-    <p style="text-align:center; color:grey;">
-    NLP-based web application using a fine-tuned DistilBERT model
-    </p>
-    """,
-    unsafe_allow_html=True
-)
-
-st.divider()
+st.title("📰 Fake News Detection App")
+st.write("Enter a news article to check whether it is **Fake** or **Real**.")
 
 # -------------------------------------------------
-# LOAD TRAINED MODEL (LOCAL)
+# LOAD MODEL & TOKENIZER
 # -------------------------------------------------
-MODEL_PATH = r"C:\Users\11vij\Downloads\544d63c1-320c-4ac6-9f8e-1d8c1191432d\544d63c1-320c-4ac6-9f8e-1d8c1191432d.tmp"
-
 @st.cache_resource
-def load_model():
-    tokenizer = DistilBertTokenizer.from_pretrained(MODEL_PATH)
-    model = DistilBertForSequenceClassification.from_pretrained(MODEL_PATH)
-    model.eval()
-    return tokenizer, model
+def load_model_and_tokenizer():
+    with open("fake_news_model.pkl", "rb") as f:
+        model = pickle.load(f)
 
-try:
-    with st.spinner("🔄 Loading trained model..."):
-        tokenizer, model = load_model()
-    st.success("✅ Trained model loaded successfully")
-except Exception as e:
-    st.error("❌ Model loading failed. Please check model files.")
-    st.stop()
+    with open("fake_news_tokenizer.pkl", "rb") as f:
+        tokenizer = pickle.load(f)
+
+    model.eval()
+    return model, tokenizer
+
+model, tokenizer = load_model_and_tokenizer()
 
 # -------------------------------------------------
 # USER INPUT
 # -------------------------------------------------
 news_text = st.text_area(
-    "📝 Enter News Article",
-    placeholder="Paste the complete news article text here...",
-    height=220
+    "📝 Paste News Content Here",
+    height=200,
+    placeholder="Enter news article text..."
 )
 
 # -------------------------------------------------
 # PREDICTION
 # -------------------------------------------------
-if st.button("🔍 Analyze News"):
+if st.button("🔍 Check News"):
     if news_text.strip() == "":
-        st.warning("⚠ Please enter some text.")
+        st.warning("Please enter some news text.")
     else:
-        try:
-            with st.spinner("🤖 Analyzing news content..."):
-                inputs = tokenizer(
-                    news_text,
-                    return_tensors="pt",
-                    truncation=True,
-                    padding=True,
-                    max_length=512
-                )
+        inputs = tokenizer(
+            news_text,
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            max_length=512
+        )
 
-                with torch.no_grad():
-                    outputs = model(**inputs)
-                    probs = F.softmax(outputs.logits, dim=1)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            probs = F.softmax(outputs.logits, dim=1)
+            prediction = torch.argmax(probs, dim=1).item()
+            confidence = probs[0][prediction].item()
 
-                prediction = torch.argmax(probs).item()
-                confidence = probs[0][prediction].item() * 100
-
-            st.divider()
-
-            if prediction == 1:
-                st.success(
-                    f"✅ **REAL NEWS**\n\n"
-                    f"🔐 Confidence: **{confidence:.2f}%**"
-                )
-            else:
-                st.error(
-                    f"❌ **FAKE NEWS**\n\n"
-                    f"🔐 Confidence: **{confidence:.2f}%**"
-                )
-
-        except Exception as e:
-            st.error("❌ Error during prediction.")
+        if prediction == 1:
+            st.success(f"✅ **Real News** ({confidence*100:.2f}% confidence)")
+        else:
+            st.error(f"❌ **Fake News** ({confidence*100:.2f}% confidence)")
 
 # -------------------------------------------------
 # FOOTER
 # -------------------------------------------------
-st.divider()
-st.markdown(
-    """
-    **Model:** Fine-tuned DistilBERT  
-    **Deployment:** Streamlit Community Cloud
-    """
-)
+st.markdown("---")
+st.caption("Built with ❤️ using Streamlit & NLP")
